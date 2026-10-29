@@ -1,0 +1,32 @@
+substitutions:
+  _IMAGE_NAME: 'my-image'
+  _SERVICE_NAME: 'my-service'
+  _PORT: '8080' # must match the port exposed in Dockerfile
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_IMAGE_NAME}:latest', '.']
+    env:
+      - 'DOCKER_BUILDKIT=1'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_IMAGE_NAME}:latest']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_IMAGE_NAME}:latest'
+      - '--region=us-central1'
+      - '--no-invoker-iam-check'
+      - '--min-instances=0'
+      - '--max-instances=1'
+      - '--cpu=1'
+      - '--memory=512Mi'
+      - '--cpu-boost'
+      - '--port={_PORT}'
